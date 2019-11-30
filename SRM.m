@@ -5,7 +5,7 @@ prop = "Propellant/sorbitol_fine.br";
 Cc = 0.95;
 
 % Grain Geometry
-Lg = 110e-3;
+Lg = 100e-3;
 Dg = 76e-3;
 Dcore = 15e-3;
 Seg = 3;
@@ -18,7 +18,7 @@ b = core*(2^0) + ends*(2^1) + outer*(2^2);	% NO CHANGE THIS
 
 %Nozzle
 Dt = 15e-3;
-De = 50e-3;
+De = 40e-3;
 Cn = 0.5*(1 + cosd(12));	% Divergence losses
 
 % Chamber Geometry
@@ -28,11 +28,14 @@ Dc = 76e-3;
 % Simulation Time-Step
 dt = 1e-3;
 
+% Erosive Burning
+K = 0;
+M_erosive = 0.8;
 
 %%%%%%% NO CHANGE FROM HERE %%%%%%%
 
 % Simulation Set Up and Run
-m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, 1);
+m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, 1, K, M_erosive);
 m.simulation(dt);
 
 

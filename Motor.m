@@ -5,15 +5,15 @@ classdef Motor<handle
 	end
 	
 	methods
-		function m = Motor(fileName, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, a)
+		function m = Motor(fileName, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, a, K, M_er)
 			% ambient conditions
 			if a == 1
 				% sea level
 				m.amb.p = 1;
 				m.amb.M = 28.9647e-3;
-				k = 1.4;
-				R = 8.3144/m.amb.M;
-				m.amb.cp = k*R/(k-1);
+				m.amb.k = 1.4;
+				m.amb.R = 8.3144/m.amb.M;
+				m.amb.cp = m.amb.k*m.amb.R/(m.amb.k-1);
 				m.amb.ro = 1.225;
 				m.amb.T = 273.15;
 			else
@@ -26,7 +26,7 @@ classdef Motor<handle
 			end
 			
 			% chemestry and propellant
-			m.p = Propellant(fileName, Lg, Dg, Dcore, Seg, b);
+			m.p = Propellant(fileName, Lg, Dg, Dcore, Seg, b, K, M_er);
 			
 			% motor geometry
 			m.Vol = Lc*pi*(Dc/2)^2;
@@ -49,7 +49,7 @@ classdef Motor<handle
 			phi = 0;
 			bar = 1e5;
 			cp = m.amb.cp;
-			[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt);
+			[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
 			
 			while true
 				m.m = [m.m, m.m(end) + dm - m.m_dot(end)*dt];
@@ -66,7 +66,7 @@ classdef Motor<handle
 				m.t = [m.t, m.t(end) + dt];
 				
 				if Vc ~= m.Vol
-					[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt);
+					[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt, m.At, k, R, m.Tc(end));
 				else
 					dm = 0;
 				end

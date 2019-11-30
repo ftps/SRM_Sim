@@ -5,7 +5,7 @@ classdef Propellant<handle
 	end
 	
 	methods
-		function obj = Propellant(fileName, Lg, Dg, Dcore, Seg, b, K, M_er)
+		function obj = Propellant(fileName, Lg, Dg, Dcore, Seg, b, M_er, K)
 			r = @(p) 0;
 
 			fp = fopen(fileName, 'r');
@@ -45,21 +45,14 @@ classdef Propellant<handle
 			
 		end
 		
-		function [dm, Vc] = burn(obj, pc, Vol, dt, At, k, R, Tc)
+		function [dm, Vc] = burn(obj, pc, Vol, dt, At)
 			
 			A_core = pi*(obj.Dcore/2)^2;
 			if A_core < At
-				Me = 1;
-			else
-				Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - A_core/At, [1e-4, 1]);
-			end
-				
-			if Me > obj.M_er
-				dd = 2*obj.r(pc)*(1 + obj.K*(Me - obj.M_er)*sqrt(k*R*Tc/(1+0.5*(k-1))))/1000;
-			else
-				dd = 2*obj.r(pc)*dt;
-			end
+				Me
 			
+			
+			dd = 2*obj.r(pc)*dt;
 			Gvol = obj.Seg*obj.Lg*pi*(obj.Dg^2 - obj.Dcore^2)/4;
 
 			if bitand(obj.b, 1)
