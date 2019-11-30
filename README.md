@@ -7,4 +7,7 @@ TO-DO LIST:
 - GUI;
 - Multi-phase flow;
 - Variable gas properties;
+<<<<<<< HEAD
 - Add more propellants;
+=======
+>>>>>>> 1841d1315935e5845521cf501125a40335dadcad
