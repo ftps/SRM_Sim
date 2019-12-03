@@ -51,7 +51,7 @@ classdef Motor<handle
 			cp = m.amb.cp;
 			[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
 			
-			while true
+			while m.pc(end) > m.amb.p || m.t(end) == 0
 				m.m = [m.m, m.m(end) + dm - m.m_dot(end)*dt];
 				phi = (phi*(m.m(end)-dm) + dm)/m.m(end);		% mass percentage of propelant
 				M = phi*m.p.M + (1-phi)*m.amb.M;
@@ -71,35 +71,15 @@ classdef Motor<handle
 					dm = 0;
 				end
 				
-				if m.is_subsonic(k)
-					Me = sqrt(2*((m.pc(end)/m.amb.p)^((k-1)/k) - 1)/(k-1));
-					m.m_dot = [m.m_dot, m.Ae*Me*m.amb.p*bar*sqrt(k*(1+0.5*(k-1)*Me^2)/(R*m.Tc(end)))];
-					m.Th = [m.Th, m.Ceff*m.Ae*m.amb.p*bar*k*Me^2];
-				else
-					Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - m.e, [1, 10]);
-					tt = 1+0.5*(k-1)*Me^2;
-					p_exit = m.pc(end)/(tt^(k/(k-1)));
-					m.m_dot = [m.m_dot, m.pc(end)*bar*m.At*G/sqrt(R*m.Tc(end))];
-					m.Th = [m.Th, m.Ceff*m.m_dot(end)*Me*sqrt(k*R*m.Tc(end)/tt) + m.Ae*(p_exit - m.amb.p)*bar];
-				end
-				
+				Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - m.e, [1, 10]);
+				tt = 1+0.5*(k-1)*Me^2;
+				p_exit = m.pc(end)/(tt^(k/(k-1)));
+				m.m_dot = [m.m_dot, m.pc(end)*bar*m.At*G/sqrt(R*m.Tc(end))];
+				m.Th = [m.Th, m.Ceff*m.m_dot(end)*Me*sqrt(k*R*m.Tc(end)/tt) + m.Ae*(p_exit - m.amb.p)*bar];
+
 				if m.Th(end) < 0
 					m.Th(end) = 0;
 				end
-				
-				if abs(m.pc(end) - m.pc(end-1)) < 0.1 && abs(m.Th(end)) < 5
-					break;
-				end
-			end
-		end
-		
-		function [boo] = is_subsonic(m, k)
-			Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - m.e, [1e-4, 1]);
-			pp = m.amb.p*((1+0.5*(k-1)*Me^2)^(k/(k-1)));
-			if m.pc < pp
-				boo = true;
-			else
-				boo = false;
 			end
 		end
 	end
