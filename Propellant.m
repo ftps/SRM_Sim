@@ -86,4 +86,3 @@ classdef Propellant<handle
 		end
 	end
 end
-

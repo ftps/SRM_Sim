@@ -1,41 +1,44 @@
-g0 = 9.81;
+%% Solid Rocket Motor Simulator - by Ftps
 
 % Propellant
-prop = "Propellant/sorbitol_fine.br";
-Cc = 0.95;
+prop = "Propellant/sorbitol_fine.br";	% For now, only available propellant
+Cc = 0.95;			% Combustion efficiency
 
 % Grain Geometry
-Lg = 100e-3;
-Dg = 76e-3;
-Dcore = 15e-3;
-Seg = 3;
+Lg = 100e-3;		% Grain length
+Dg = 76e-3;			% Grain diamter
+Dcore = 10e-3;		% Core diameter
+Seg = 3;			% Number of grain segments
 
 % Burn Type
-core = true;	% core burning
-ends = true;	% ends burning
-outer = false;	% outer surface burning
-b = core*(2^0) + ends*(2^1) + outer*(2^2);	% NO CHANGE THIS
+core = true;		% core burning
+ends = true;		% ends burning
+outer = false;		% outer surface burning
 
 %Nozzle
-Dt = 15e-3;
-De = 40e-3;
-Cn = 0.5*(1 + cosd(12));	% Divergence losses
+Dt = 15e-3;			% Nozzle throat diameter
+De = 40e-3;			% Nozzle eixt diameter
+Cn = 0.5*(1 + cosd(12));	% Nozzle losses (Divergence losses: 0.5*(1+cosd(a)), a = divergence half-angle
 
 % Chamber Geometry
-Lc = 400e-3;
-Dc = 76e-3;
+Lc = 400e-3;		% Chamber length
+Dc = 76e-3;			% Chamber diameter
 
 % Simulation Time-Step
 dt = 1e-3;
 
 % Erosive Burning
-K = 0;
-M_erosive = 0.8;
+K = 0;			% Erosive burning coefficient (K = 0 for no erosive burning, value usualy in 0.05 < K < 0.3)
+M_erosive = 0.9;	% Mach number in the chamber at which erosive burning starts happening, usually in 0.8 < M < 1
+
+% Sea level (1) or vacuum (0)
+Sea_level = 1;
 
 %%%%%%% NO CHANGE FROM HERE %%%%%%%
 
 % Simulation Set Up and Run
-m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, 1, K, M_erosive);
+b = core*(2^0) + ends*(2^1) + outer*(2^2);
+m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, Sea_level, K, M_erosive);
 m.simulation(dt);
 
 
@@ -61,6 +64,7 @@ xlabel("Time - s");
 ylabel("m_d - kg/s");
 hold off;
 
+g0 = 9.81;
 I = 0;
 F_av = 0;
 F_max = 0;
@@ -82,6 +86,8 @@ disp("Total Impulse = " + I + " Ns");
 disp("Isp = " + Isp + " s");
 disp("Max Thrust = " + F_max + " N");
 disp("Average Thrust = " + F_av + " N");
+disp("Burn Time = " + m.t_burn + " s");
+disp("Thrust Time = " + m.t(end) + " s");
 
 
 
