@@ -1,15 +1,15 @@
 classdef Motor<handle	
 	properties
 		amb, p, At, Ae, e, Ceff, Vol;
-		pc, Tc, Th, m_dot, m, t, t_burn;
+		pc, Tc, Th, m_dot, m, t, t_burn, t_size, t_t;
 	end
 	
 	methods
-		function m = Motor(fileName, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, a, K, M_er)
+		function m = Motor(fileName, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, a, K, M_er, n_c)
 			% ambient conditions
 			if a == 1
 				% sea level
-				m.amb.p = 1;
+				m.amb.p = 1.01325;
 				m.amb.M = 28.9647e-3;
 				m.amb.k = 1.4;
 				m.amb.R = 8.3144/m.amb.M;
@@ -28,7 +28,7 @@ classdef Motor<handle
 			end
 			
 			% chemestry and propellant
-			m.p = Propellant(fileName, Lg, Dg, Dcore, Seg, b, K, M_er);
+			m.p = Propellant(fileName, Lg, Dg, Dcore, Seg, b, K, M_er, n_c);
 			
 			% motor geometry
 			m.Vol = Lc*pi*(Dc/2)^2;
@@ -46,49 +46,85 @@ classdef Motor<handle
 			Vol_i = Seg*Lg*pi*(Dg^2 - Dcore^2)/4;
 			m.m = m.amb.ro*(m.Vol - Vol_i);
 			m.t_burn = 0;
+            m.t_t = 0;
 		end
 		
-		function [] = simulation(m, dt)
+		function [] = simulation(m, dt, t_est)
 			phi = 0;
 			bar = 1e5;
 			cp = m.amb.cp;
 			C = 0;
-			[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
+			[dm, dm1, Vc] = m.p.burn(m.pc, m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
 			
-			while m.pc(end) > 1.001*m.amb.p || m.t(end) == 0
-				m.t = [m.t, m.t(end) + dt];
-				m.m = [m.m, m.m(end) + dm - m.m_dot(end)*dt];
+            extra = floor(t_est/dt);
+            max = extra;
+            
+            m.pc = [m.pc, zeros(1, max-1)];
+            m.Tc = [m.Tc, zeros(1, max-1)];
+            m.m_dot = [m.m_dot, zeros(1, max-1)];
+            m.Th = [m.Th, zeros(1, max-1)];
+            m.t = [m.t, zeros(1, max-1)];
+            m.m = [m.m, zeros(1, max-1)];
+            i = 1;
+            
+			while (m.pc(i) > m.amb.p && m.m(i) > 0) || dm ~= 0 
+                i = i+1;
+                if i > max
+                    
+                    max = max + extra;
+
+                    m.pc = [m.pc, zeros(1, extra)];
+                    m.Tc = [m.Tc, zeros(1, extra)];
+                    m.m_dot = [m.m_dot, zeros(1, extra)];
+                    m.Th = [m.Th, zeros(1, extra)];
+                    m.t = [m.t, zeros(1, extra)];
+                    m.m = [m.m, zeros(1, extra)];
+                end
+                
+				m.t(i) = m.t(i-1) + dt;
+				m.m(i) = m.m(i-1) + dm - m.m_dot(i-1)*dt;
 				
 				if dm ~= 0
-					phi = (phi*(m.m(end)-dm) + dm)/m.m(end);		% mass percentage of propelant
+					phi = (phi*(m.m(i-1)-dm) + dm)/m.m(i-1);		% mass percentage of propelant
 					M = phi*m.p.M + (1-phi)*m.amb.M;
 					R = 8.3144/M;
-					cp_old = cp;
 					cp = phi*m.p.cp + (1-phi)*m.amb.cp;
 					k = cp/(cp-R);
 					G = sqrt(k)*(2/(k+1))^((k+1)/(2*(k-1)));
-					m.Tc = [m.Tc, (dm*m.p.cp*m.p.Tf + (m.m(end-1) - m.m_dot(end)*dt)*cp_old*m.Tc(end))/(m.m(end)*cp)];
-					m.pc = [m.pc, m.m(end)*R*m.Tc(end)/(Vc*bar)];
-					[dm, Vc] = m.p.burn(m.pc(end), m.Vol, dt, m.At, k, R, m.Tc(end));
-				else
-					if C == 0
-						C = m.pc(end)*(Vc/m.m(end-1))^k;
-						m.t_burn = m.t(end);
-					end
-					m.pc = [m.pc, C*(m.m(end)/Vc)^k];
-					m.Tc = [m.Tc, m.pc(end)*bar*Vc/(R*m.m(end))];
-				end
+					m.Tc(i) = m.Tc(i-1) + (1/m.m(i-1))*((1/(cp-R))*(m.p.cp*m.p.Tf*dm - dt*bar*m.pc(i-1)*m.p.S*m.p.r(m.pc(i-1))) - m.Tc(i-1)*(k*m.m_dot(i-1)*dt + m.m(i) - m.m(i-1)));
+                    m.pc(i) = m.pc(i-1) + ((R*m.Tc(i-1)/Vc)*(dm1 - m.m_dot(i-1)*dt) + (1/m.Tc(i-1))*(m.Tc(i) - m.Tc(i-1)))/bar;
+                    [dm, dm1, Vc] = m.p.burn(m.pc(i), m.Vol, dt, m.At, k, R, m.Tc(i));
+                else
+                    if m.t_burn == 0
+                       m.t_burn = m.t(i);
+                       C = m.pc(i-1)/(m.Tc(i-1)^(k/(k-1)));
+                    end
+					m.Tc(i) = m.Tc(i-1) - (k-1)*m.Tc(i-1)*m.m_dot(i-1)*dt/m.m(i-1);
+                    %m.pc(i) = m.pc(i-1) - ((R*m.Tc(i-1)/Vc)*m.m_dot(i-1)*dt - (1/m.Tc(i-1))*(m.Tc(i) - m.Tc(i-1)))/bar;
+                    m.pc(i) = C*m.Tc(i)^(k/(k-1));
+                end
 				
 				Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - m.e, [1, 10]);
 				tt = 1+0.5*(k-1)*Me^2;
-				p_exit = m.pc(end)/(tt^(k/(k-1)));
-				m.m_dot = [m.m_dot, m.pc(end)*bar*m.At*G/sqrt(R*m.Tc(end))];
-				m.Th = [m.Th, m.Ceff*m.m_dot(end)*Me*sqrt(k*R*m.Tc(end)/tt) + m.Ae*(p_exit - m.amb.p)*bar];
+				p_exit = m.pc(i)/(tt^(k/(k-1)));
+				m.m_dot(i) = bar*m.pc(i)*m.At*G/sqrt(R*m.Tc(i));
+                m.Th(i) = m.Ceff*m.m_dot(i)*Me*sqrt(k*R*m.Tc(i)/tt) + m.Ae*(p_exit - m.amb.p)*bar;
 
-				if m.Th(end) < 0
-					m.Th(end) = 0;
-				end
-			end
+				if m.Th(i) < 0
+					m.Th(i) = 0;
+                    if m.t_t == 0 && dm == 0
+                       m.t_t = m.t(i);
+                    end
+                end
+            end
+            
+            m.t = m.t(1:i);
+            m.Tc = m.Tc(1:i);
+            m.pc = m.pc(1:i);
+            m.m = m.m(1:i);
+            m.m_dot = m.m_dot(1:i);
+            m.Th = m.Th(1:i);
+            disp(i);
 		end
 	end
 	
