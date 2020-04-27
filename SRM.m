@@ -1,5 +1,7 @@
 %% Solid Rocket Motor Simulator - by Ftps
 
+clear
+
 % Propellant
 prop = "Propellant/sorbitol_fine.br";	% For now, only available propellant
 Cc = 0.95;			% Combustion efficiency

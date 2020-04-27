@@ -56,7 +56,7 @@ classdef Propellant<handle
 			
 		end
 		
-		function [dm, dm1, Vc] = burn(obj, pc, Vol, dt, At, k, R, Tc)
+		function [dm, Vc] = burn(obj, pc, Vol, dt, At, k, R, Tc)
 			
 			if obj.K ~= 0
                 A_core = pi*(obj.Dcore/2)^2;
@@ -106,7 +106,7 @@ classdef Propellant<handle
 			end
 
 			dm = obj.ro*(Gvol - Gvol_new);
-			dm1 = (obj.ro - pc*(1e5)/(R*Tc))*(Gvol - Gvol_new);
+			%dm1 = (obj.ro - pc*(1e5)/(R*Tc))*(Gvol - Gvol_new);
             
             if dm < 0
 				dm = 0;

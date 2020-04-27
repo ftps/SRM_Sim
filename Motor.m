@@ -52,9 +52,9 @@ classdef Motor<handle
 		function [] = simulation(m, dt, t_est)
 			phi = 0;
 			bar = 1e5;
-			cp = m.amb.cp;
-			C = 0;
-			[dm, dm1, Vc] = m.p.burn(m.pc, m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
+            cv = m.amb.cp - m.amb.R;
+			%C = 0;
+			[dm, Vc] = m.p.burn(m.pc, m.Vol, dt, m.At, m.amb.k, m.amb.R, m.amb.T);
 			
             extra = floor(t_est/dt);
             max = extra;
@@ -85,23 +85,27 @@ classdef Motor<handle
 				m.m(i) = m.m(i-1) + dm - m.m_dot(i-1)*dt;
 				
 				if dm ~= 0
-					phi = (phi*(m.m(i-1)-dm) + dm)/m.m(i-1);		% mass percentage of propelant
-					M = phi*m.p.M + (1-phi)*m.amb.M;
+                    phi = (phi*(m.m(i-1)-dm) + dm)/m.m(i-1);		% mass percentage of propelant
+					M = 1/(phi/m.p.M + (1-phi)/m.amb.M);
 					R = 8.3144/M;
 					cp = phi*m.p.cp + (1-phi)*m.amb.cp;
-					k = cp/(cp-R);
-					G = sqrt(k)*(2/(k+1))^((k+1)/(2*(k-1)));
-					m.Tc(i) = m.Tc(i-1) + (1/m.m(i-1))*((1/(cp-R))*(m.p.cp*m.p.Tf*dm - dt*bar*m.pc(i-1)*m.p.S*m.p.r(m.pc(i-1))) - m.Tc(i-1)*(k*m.m_dot(i-1)*dt + m.m(i) - m.m(i-1)));
-                    m.pc(i) = m.pc(i-1) + ((R*m.Tc(i-1)/Vc)*(dm1 - m.m_dot(i-1)*dt) + (1/m.Tc(i-1))*(m.Tc(i) - m.Tc(i-1)))/bar;
-                    [dm, dm1, Vc] = m.p.burn(m.pc(i), m.Vol, dt, m.At, k, R, m.Tc(i));
+                    cv_old = cv;
+                    cv = cp - R;
+					k = cp/cv;
+                    G = sqrt(k)*(2/(k+1))^((k+1)/(2*(k-1)));
+					m.Tc(i) = m.Tc(i-1) + (1/m.m(i-1))*((1/(cp-R))*(m.p.cp*m.p.Tf*dm - dt*bar*m.pc(i-1)*m.p.S*m.p.r(m.pc(i-1))) - m.Tc(i-1)*(k*m.m_dot(i-1)*dt + m.m(i) - m.m(i-1))) - m.Tc(i-1)*(cv-cv_old)/cv_old;
+                    %m.pc(i) = m.pc(i-1) + ((R*m.Tc(i-1)/Vc)*(dm1 - m.m_dot(i-1)*dt) + (1/m.Tc(i-1))*(m.Tc(i) - m.Tc(i-1)))/bar;
+                    m.pc(i) = m.m(i)*R*m.Tc(i)/(Vc*bar);
+                    [dm, Vc] = m.p.burn(m.pc(i), m.Vol, dt, m.At, k, R, m.Tc(i));
                 else
                     if m.t_burn == 0
                        m.t_burn = m.t(i);
-                       C = m.pc(i-1)/(m.Tc(i-1)^(k/(k-1)));
+                       %C = m.pc(i-1)/(m.Tc(i-1)^(k/(k-1)));
                     end
 					m.Tc(i) = m.Tc(i-1) - (k-1)*m.Tc(i-1)*m.m_dot(i-1)*dt/m.m(i-1);
-                    %m.pc(i) = m.pc(i-1) - ((R*m.Tc(i-1)/Vc)*m.m_dot(i-1)*dt - (1/m.Tc(i-1))*(m.Tc(i) - m.Tc(i-1)))/bar;
-                    m.pc(i) = C*m.Tc(i)^(k/(k-1));
+                    m.pc(i) = m.m(i)*R*m.Tc(i)/(Vc*bar);
+                    %m.pc(i) = C*m.Tc(i)^(k/(k-1));
+                    
                 end
 				
 				Me = fzero(@(x) (1/x)*sqrt((1+((k-1)/2)*x^2)/(1+((k-1)/2)))^((k+1)/(k-1)) - m.e, [1, 10]);
