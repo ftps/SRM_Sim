@@ -3,39 +3,35 @@
 clear
 
 % Propellant
-prop = "Propellant/sorbitol_fine.br";	% For now, only available propellant
+prop = "Propellant/sorbitol_coarse.br";	% For now, only available propellant
 Cc = 0.95;			% Combustion efficiency
 n_c = 0.95;         % Real/Ideal density
 
 % Grain Geometry (cylindrical)
-Lg = 121e-3;		% Grain length
-Dg = 130e-3;			% Grain diamter
-Dcore = 60e-3;		% Core diameter
-Seg = 3;			% Number of grain segments
+Lg = 107e-3;		% Grain length
+Dg = 76.6e-3;			% Grain diamter
+Dcore = 25e-3;		% Core diameter
+Seg = 1;			% Number of grain segments
 
 % Burn Type
 core = true;		% core burning
-ends = true;		% ends burning
+ends = false;		% ends burning
 outer = false;		% outer surface burning
 
 %Nozzle
-Dt = 15e-3;			% Nozzle throat diameter
-De = 45e-3;			% Nozzle eixt diameter
+Dt = 7e-3;			% Nozzle throat diameter
+De = 14e-3;			% Nozzle eixt diameter
 Cn = 0.5*(1 + cosd(12));	% Nozzle losses (Divergence losses: 0.5*(1+cosd(a)), a = divergence half-angle
 
 % Chamber Geometry
-Lc = 400e-3;		% Chamber length
-Dc = 130e-3;			% Chamber diameter
+Lc = 118.9e-3;		% Chamber length
+Dc = 80e-3;			% Chamber diameter
 
 % Simulation Time-Step
-dt = 1e-4;
-
-% Erosive Burning
-K = 0;			% Erosive burning coefficient (K = 0 for no erosive burning, value usualy in 0.05 < K < 0.3)
-M_erosive = 0.9;	% Mach number in the chamber at which erosive burning starts happening, usually in 0.8 < M < 1
+dt = 1e-3;
 
 % Sea level (1) or vacuum (0)
-Sea_level = 1;
+Sea_level = 1;      % DON'T CHANGE, NO BURN MODEL FOR VACCUM PRESSURES AND NULL-MASS ERRORS
 
 % Estimated Burn Time
 t_est = 4;
@@ -44,7 +40,7 @@ t_est = 4;
 
 % Simulation Set Up and Run
 b = core*(2^0) + ends*(2^1) + outer*(2^2);
-m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, Sea_level, K, M_erosive, n_c);
+m = Motor(prop, Lg, Dg, Dcore, Seg, b, Dt, De, Lc, Dc, Cc, Cn, Sea_level, n_c);
 m.simulation(dt, t_est);
 
 
@@ -94,7 +90,3 @@ disp("Max Thrust = " + F_max + " N");
 disp("Average Thrust = " + F_av + " N");
 disp("Burn Time = " + m.t_burn + " s");
 disp("Thrust Time = " + m.t_t + " s");
-
-
-
-
